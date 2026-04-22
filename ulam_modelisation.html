@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cathédrale 1995 — Spirale d'Ulam</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width:100%; height:100%;
+  background:#050505;
+  color:#e0e0e0;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  overflow:hidden;
+  touch-action:none;
+}
+#header {
+  position:absolute; top:0; left:0; right:0;
+  background:rgba(5,5,5,0.88);
+  border-bottom:1px solid rgba(201,162,39,0.22);
+  padding:5px 10px;
+  text-align:center;
+  font-size:0.68rem;
+  color:#777;
+  letter-spacing:0.4px;
+  z-index:30;
+  backdrop-filter:blur(4px);
+}
+#header b { color:#C9A227; font-weight:600; }
+#loader {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  background:#050505; z-index:100;
+  transition:opacity 0.6s;
+}
+#loader h1 {
+  font-size:1.3rem; color:#C9A227;
+  margin-bottom:10px; letter-spacing:2px;
+}
+#loader .bar {
+  width:240px; height:3px;
+  background:#1a1a1a; border-radius:2px;
+  overflow:hidden;
+}
+#loader .fill {
+  width:0%; height:100%;
+  background:linear-gradient(90deg,#C9A227,#9B59B6,#1ABC9C);
+  transition:width 0.3s;
+}
+#loader .step {
+  font-size:0.7rem; color:#555;
+  margin-top:8px; font-style:italic;
+}
+canvas { display:block; touch-action:none; }
+#ui {
+  position:absolute; bottom:0; left:0; right:0;
+  background:linear-gradient(to top, rgba(5,5,5,0.94), transparent);
+  padding:10px 6px 20px;
+  pointer-events:none;
+  z-index:20;
+}
+#ui .row {
+  display:flex; gap:5px; justify-content:center;
+  pointer-events:auto; flex-wrap:wrap;
+}
+.btn {
+  background:rgba(201,162,39,0.12);
+  border:1px solid rgba(201,162,39,0.35);
+  color:#C9A227;
+  padding:6px 11px; border-radius:16px;
+  font-size:0.72rem; cursor:pointer;
+  backdrop-filter:blur(4px);
+  transition:all 0.2s; user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+.btn:active { background:rgba(201,162,39,0.3); transform:scale(0.95); }
+.btn.on { background:rgba(201,162,39,0.4); border-color:#C9A227; }
+#info {
+  position:absolute; top:34px; left:10px; right:10px;
+  text-align:center; pointer-events:none;
+  z-index:20; opacity:0; transition:opacity 0.3s;
+}
+#info.show { opacity:1; }
+#info span {
+  background:rgba(0,0,0,0.75);
+  padding:5px 12px; border-radius:14px;
+  font-size:0.78rem; color:#fff;
+  border:1px solid rgba(201,162,39,0.25);
+  backdrop-filter:blur(4px);
+}
+.legend {
+  position:absolute; top:34px; left:8px;
+  background:rgba(0,0,0,0.82);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:10px; padding:8px 10px;
+  font-size:0.62rem; line-height:1.5;
+  backdrop-filter:blur(6px); z-index:20;
+  max-width:150px; display:none;
+}
+.dot { display:inline-block; width:7px; height:7px;
+  border-radius:50%; margin-right:5px; }
+
+/* Encadré Corde */
+#ropeCard {
+  position:absolute;
+  background:rgba(10,10,10,0.94);
+  border:1px solid rgba(201,162,39,0.45);
+  border-radius:12px;
+  padding:12px 16px;
+  font-size:0.78rem;
+  line-height:1.6;
+  color:#ddd;
+  backdrop-filter:blur(8px);
+  z-index:25;
+  display:none;
+  min-width:190px;
+  max-width:270px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.6);
+}
+#ropeCard .title {
+  color:#C9A227; font-weight:bold;
+  font-size:0.85rem; margin-bottom:6px;
+  border-bottom:1px solid rgba(201,162,39,0.25);
+  padding-bottom:4px;
+}
+#ropeCard .kv { display:flex; justify-content:space-between; gap:12px; }
+#ropeCard .k { color:#888; }
+#ropeCard .v { color:#fff; font-family:monospace; }
+#ropeCard .fam { color:#C9A227; font-weight:bold; }
+#ropeCard .close {
+  position:absolute; top:6px; right:10px;
+  color:#666; font-size:1rem; cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <b>Cathédrale 1995</b> — Architecte1995 & Kimi K 2.6 &nbsp;|&nbsp; MIT License
+</div>
+
+<div id="loader">
+  <h1>CATHÉDRALE 1995</h1>
+  <div class="bar"><div class="fill" id="fill"></div></div>
+  <div class="step" id="step">Initialisation...</div>
+</div>
+
+<div class="legend" id="legend">
+  <div><span class="dot" style="background:#B8860B"></span>Premier</div>
+  <div><span class="dot" style="background:#27AE60"></span>S. Germain</div>
+  <div><span class="dot" style="background:#E67E22"></span>Mersenne</div>
+  <div><span class="dot" style="background:#9B59B6"></span>Fermat</div>
+  <div><span class="dot" style="background:#1ABC9C"></span>Heegner</div>
+  <div><span class="dot" style="background:#E74C3C"></span>Jumeau</div>
+  <div><span class="dot" style="background:#FF69B4"></span>Palindrome</div>
+  <div><span class="dot" style="background:#5DADE2"></span>Safe</div>
+</div>
+
+<div id="info"><span id="infoText">—</span></div>
+
+<div id="ropeCard">
+  <div class="close" onclick="hideRopeCard()">×</div>
+  <div class="title" id="ropeTitle">Corde</div>
+  <div class="kv"><span class="k">Famille</span><span class="v fam" id="rFam">—</span></div>
+  <div class="kv"><span class="k">Gap</span><span class="v" id="rGap">—</span></div>
+  <div class="kv"><span class="k">Longueur</span><span class="v" id="rLen">—</span></div>
+  <div class="kv"><span class="k">Ratio R</span><span class="v" id="rRat">—</span></div>
+  <div class="kv"><span class="k">Pente</span><span class="v" id="rSlope">—</span></div>
+  <div class="kv"><span class="k">Angle</span><span class="v" id="rAng">—</span></div>
+</div>
+
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <div class="row">
+    <button class="btn" onclick="zoomAt(1.4)">+</button>
+    <button class="btn" onclick="zoomAt(0.7)">−</button>
+    <button class="btn" onclick="resetView()">Reset</button>
+    <button class="btn" id="btnDraw" onclick="toggleDraw()">Relier</button>
+    <button class="btn" onclick="clearRopes()">Effacer</button>
+    <button class="btn" onclick="toggleLegend()">Légende</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const fill = document.getElementById('fill');
+const step = document.getElementById('step');
+const loader = document.getElementById('loader');
+const info = document.getElementById('info');
+const infoText = document.getElementById('infoText');
+const legendEl = document.getElementById('legend');
+const ropeCard = document.getElementById('ropeCard');
+const btnDraw = document.getElementById('btnDraw');
+
+let W, H, CX, CY;
+let scale = 6;
+let panX = 0, panY = 0;
+let isDragging = false;
+let lastX = 0, lastY = 0;
+let tapStart = 0;
+let lastTap = 0;
+let needsRender = true;
+
+let drawMode = false;
+let pending = null;
+let ropes = [];
+let activeRope = null;
+
+const MAX_N = 1000000;
+const family = new Uint8Array(MAX_N + 1);
+let specials = [];
+
+const PALETTE = {
+  1: { c:'#B8860B', g:'#FFD700', r:1.0 },
+  2: { c:'#27AE60', g:'#2ECC71', r:1.3 },
+  3: { c:'#E67E22', g:'#F39C12', r:1.5 },
+  4: { c:'#9B59B6', g:'#BB8FCE', r:1.7 },
+  5: { c:'#1ABC9C', g:'#48C9B0', r:1.5 },
+  6: { c:'#E74C3C', g:'#EC7063', r:1.3 },
+  7: { c:'#FF69B4', g:'#FF85C2', r:1.2 },
+  8: { c:'#5DADE2', g:'#85C1E9', r:1.2 },
+};
+
+const ROPE_COLORS = {
+  cordier:    { c:'#C9A227', g:'#FFD700' },
+  antipode:   { c:'#E74C3C', g:'#EC7063' },
+  diagonal:   { c:'#27AE60', g:'#2ECC71' },
+  orthogonal: { c:'#5DADE2', g:'#85C1E9' },
+  resonant:   { c:'#9B59B6', g:'#BB8FCE' },
+  frere:      { c:'#FF69B4', g:'#FF85C2' },
+  echo:       { c:'#1ABC9C', g:'#48C9B0' },
+  default:    { c:'#C9A227', g:'#FFD700' },
+};
+
+const FAM_NAMES = {
+  cordier:'Cordier', antipode:'Antipode', diagonal:'Diagonal',
+  orthogonal:'Orthogonal', resonant:'Résonant', frere:'Frère', echo:'Écho', default:'—'
+};
+
+function setProgress(p, text) {
+  fill.style.width = p + '%';
+  step.textContent = text;
+}
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  CX = W/2; CY = H/2;
+  needsRender = true;
+}
+window.addEventListener('resize', resize);
+
+function ulamCoord(n) {
+  if (n === 1) return {x:0, y:0};
+  const k = Math.ceil((Math.sqrt(n) - 1) / 2);
+  const t = 2*k + 1;
+  const m = t*t;
+  if (n >= m - t + 1) return {x: k - (m - n), y: -k};
+  if (n >= m - 2*t + 2) return {x: -k, y: -k + (m - t + 1 - n)};
+  if (n >= m - 3*t + 3) return {x: -k + (m - 2*t + 2 - n), y: k};
+  return {x: k, y: k - (m - 3*t + 3 - n)};
+}
+
+function isPalindrome(n) {
+  let r = 0, o = n;
+  while (n > 0) { r = r*10 + (n%10); n = Math.floor(n/10); }
+  return r === o;
+}
+
+function sieve() {
+  const isP = new Uint8Array(MAX_N + 1);
+  for (let i = 2; i <= MAX_N; i++) isP[i] = 1;
+  for (let i = 2; i * i <= MAX_N; i++) {
+    if (isP[i]) for (let j = i*i; j <= MAX_N; j += i) isP[j] = 0;
+  }
+  return isP;
+}
+
+function compute() {
+  setProgress(5, 'Crible d\'Ératosthène (1M)...');
+  const isP = sieve();
+
+  setProgress(25, 'Familles rares...');
+  const fermat = [3, 5, 17, 257, 65537];
+  for (let p of fermat) if (p <= MAX_N) family[p] = 4;
+
+  const mersenne = [3, 7, 31, 127, 8191, 131071, 524287];
+  for (let p of mersenne) if (p <= MAX_N) family[p] = 3;
+
+  const heegner = [2, 3, 7, 11, 19, 43, 67, 163];
+  for (let p of heegner) if (p <= MAX_N && isP[p]) family[p] = 5;
+
+  setProgress(40, 'Sophie Germain & Safe...');
+  for (let p = 2; p <= MAX_N; p++) {
+    if (!isP[p]) continue;
+    if (2*p + 1 <= MAX_N && isP[2*p + 1]) {
+      if (family[p] === 0) family[p] = 2;
+    }
+    if (p > 3 && isP[(p-1)/2]) {
+      if (family[p] === 0) family[p] = 8;
+    }
+  }
+
+  setProgress(60, 'Jumeaux & Palindromes...');
+  for (let p = 3; p <= MAX_N - 2; p += 2) {
+    if (isP[p] && isP[p+2]) {
+      if (family[p] <= 1) family[p] = 6;
+      if (family[p+2] <= 1) family[p+2] = 6;
+    }
+  }
+  for (let p = 2; p <= MAX_N; p++) {
+    if (isP[p] && isPalindrome(p)) {
+      if (family[p] <= 1) family[p] = 7;
+    }
+  }
+
+  setProgress(75, 'Indexation...');
+  for (let p = 2; p <= MAX_N; p++) {
+    if (isP[p] && family[p] === 0) family[p] = 1;
+  }
+
+  setProgress(85, 'Coordonnées...');
+  for (let n = 1; n <= MAX_N; n++) {
+    const f = family[n];
+    if (f > 0) {
+      const c = ulamCoord(n);
+      specials.push({n, x: c.x, y: c.y, f});
+    }
+  }
+
+  setProgress(100, 'Prêt.');
+  setTimeout(() => {
+    loader.style.opacity = '0';
+    setTimeout(() => loader.style.display = 'none', 600);
+    legendEl.style.display = 'block';
+    needsRender = true;
+  }, 300);
+}
+
+function toScreen(x, y) {
+  return { x: CX + x * scale + panX, y: CY - y * scale + panY };
+}
+
+// ========== CLASSIFICATION DES CORDES ==========
+function classifyRope(ro, existing) {
+  const gap = Math.abs(ro.n2 - ro.n1);
+  const dx = ro.x2 - ro.x1;
+  const dy = ro.y2 - ro.y1;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  const R = len > 0.001 ? gap / len : 999;
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const a = ((angle % 180) + 180) % 180;
+  const a90 = ((angle % 90) + 90) % 90;
+
+  // 1. Échos (symétrie centrale)
+  if (Math.abs(ro.x1 + ro.x2) < 1.5 && Math.abs(ro.y1 + ro.y2) < 1.5) return 'echo';
+
+  // 2. Antipodes
+  if (R > 10 && len < 3) return 'antipode';
+
+  // 3. Résonants (R entier à 0.08 près)
+  const Rround = Math.round(R);
+  if (Rround >= 1 && Math.abs(R - Rround) < 0.08) return 'resonant';
+
+  // 4. Orthogonaux (proche de 0° ou 90°)
+  if (a < 6 || Math.abs(a - 90) < 6) return 'orthogonal';
+
+  // 5. Diagonaux (proche de 45°)
+  if (Math.abs(a90 - 45) < 6) return 'diagonal';
+
+  // 6. Cordiers
+  if (R > 0.85 && R < 1.15) return 'cordier';
+
+  // 7. Frères (triangle avec une autre corde existante)
+  for (let other of existing) {
+    let shared = null, opp1 = null, opp2 = null;
+    if (ro.n1 === other.n1) { shared = {x:ro.x1,y:ro.y1}; opp1={x:ro.x2,y:ro.y2}; opp2={x:other.x2,y:other.y2}; }
+    else if (ro.n1 === other.n2) { shared = {x:ro.x1,y:ro.y1}; opp1={x:ro.x2,y:ro.y2}; opp2={x:other.x1,y:other.y1}; }
+    else if (ro.n2 === other.n1) { shared = {x:ro.x2,y:ro.y2}; opp1={x:ro.x1,y:ro.y1}; opp2={x:other.x2,y:other.y2}; }
+    else if (ro.n2 === other.n2) { shared = {x:ro.x2,y:ro.y2}; opp1={x:ro.x1,y:ro.y1}; opp2={x:other.x1,y:other.y1}; }
+
+    if (shared) {
+      const d1 = Math.hypot(opp1.x - shared.x, opp1.y - shared.y);
+      const d2 = Math.hypot(opp2.x - shared.x, opp2.y - shared.y);
+      const d3 = Math.hypot(opp1.x - opp2.x, opp1.y - opp2.y);
+      if (d1 > 0 && d2 > 0 && d3 > 0) {
+        const maxd = Math.max(d1, d2, d3);
+        const mind = Math.min(d1, d2, d3);
+        if ((maxd - mind) / maxd < 0.18) return 'frere';
+        const dot = (opp1.x - shared.x)*(opp2.x - shared.x) + (opp1.y - shared.y)*(opp2.y - shared.y);
+        const cosA = dot / (d1 * d2);
+        if (Math.abs(cosA - 0.5) < 0.15 || Math.abs(cosA + 0.5) < 0.15) return 'frere';
+      }
+    }
+  }
+
+  return 'default';
+}
+
+// ========== RENDU ==========
+function draw() {
+  if (!needsRender) return;
+  needsRender = false;
+
+  ctx.fillStyle = '#050505';
+  ctx.fillRect(0, 0, W, H);
+
+  const stepG = Math.max(8, Math.floor(scale));
+  ctx.strokeStyle = 'rgba(201,162,39,0.03)';
+  ctx.lineWidth = 1;
+  const offX = (CX + panX) % stepG;
+  const offY = (CY + panY) % stepG;
+  ctx.beginPath();
+  for (let x = offX; x < W; x += stepG) { ctx.moveTo(x,0); ctx.lineTo(x,H); }
+  for (let y = offY; y < H; y += stepG) { ctx.moveTo(0,y); ctx.lineTo(W,y); }
+  ctx.stroke();
+
+  if (scale > 10) {
+    const rU = Math.max(W, H) / (2 * scale) + 3;
+    const nMax = Math.min(MAX_N, Math.floor((2*rU+1)*(2*rU+1)) + 500);
+    ctx.fillStyle = 'rgba(255,255,255,0.035)';
+    for (let n = 1; n <= nMax; n++) {
+      if (family[n] > 0) continue;
+      const c = ulamCoord(n);
+      const s = toScreen(c.x, c.y);
+      if (s.x < 0 || s.x > W || s.y < 0 || s.y > H) continue;
+      ctx.fillRect(s.x-0.5, s.y-0.5, 1, 1);
+    }
+  }
+
+  const rBase = Math.max(0.5, Math.min(2.6, scale * 0.32));
+  const glow = scale > 6;
+
+  for (let s of specials) {
+    const sc = toScreen(s.x, s.y);
+    if (sc.x < -6 || sc.x > W+6 || sc.y < -6 || sc.y > H+6) continue;
+    const pal = PALETTE[s.f];
+    const r = pal.r * rBase;
+    if (glow && s.f >= 3) {
+      ctx.shadowBlur = r * 4; ctx.shadowColor = pal.g;
+    } else if (glow) {
+      ctx.shadowBlur = r * 2; ctx.shadowColor = pal.g;
+    } else {
+      ctx.shadowBlur = 0;
+    }
+    ctx.fillStyle = pal.c;
+    ctx.beginPath(); ctx.arc(sc.x, sc.y, r, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+
+  // Cordes colorées par famille
+  ctx.lineWidth = Math.max(1.2, scale * 0.08);
+  for (let i = 0; i < ropes.length; i++) {
+    const ro = ropes[i];
+    const a = toScreen(ro.x1, ro.y1);
+    const b = toScreen(ro.x2, ro.y2);
+    const isActive = (activeRope === i);
+    const col = ROPE_COLORS[ro.family || 'default'];
+    ctx.strokeStyle = isActive ? col.g : col.c;
+    ctx.globalAlpha = isActive ? 0.95 : 0.6;
+    ctx.shadowBlur = isActive ? 12 : 4;
+    ctx.shadowColor = col.g;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+  }
+
+  // Point pending
+  if (pending) {
+    const s = toScreen(pending.x, pending.y);
+    ctx.strokeStyle = '#C9A227';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(s.x, s.y, 10 + Math.sin(Date.now()/200)*3, 0, Math.PI*2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#C9A227';
+    ctx.beginPath(); ctx.arc(s.x, s.y, 3, 0, Math.PI*2); ctx.fill();
+  }
+
+  ctx.fillStyle = '#C9A227';
+  ctx.beginPath(); ctx.arc(CX + panX, CY + panY, 1.5, 0, Math.PI*2); ctx.fill();
+}
+
+function loop() {
+  if (pending) needsRender = true;
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ========== INTERACTIONS ==========
+function zoomAt(factor, cx, cy) {
+  const px = cx ?? W/2;
+  const py = cy ?? H/2;
+  const wx = (px - CX - panX) / scale;
+  const wy = (py - CY - panY) / scale;
+  scale *= factor;
+  panX = px - CX - wx * scale;
+  panY = py - CY - wy * scale;
+  needsRender = true;
+}
+
+function resetView() {
+  scale = Math.min(W, H) / 45;
+  panX = 0; panY = 0;
+  hideRopeCard();
+  needsRender = true;
+}
+
+function toggleLegend() {
+  legendEl.style.display = legendEl.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleDraw() {
+  drawMode = !drawMode;
+  btnDraw.classList.toggle('on', drawMode);
+  if (!drawMode) { pending = null; needsRender = true; }
+}
+
+function clearRopes() {
+  ropes = []; activeRope = null;
+  hideRopeCard(); pending = null;
+  needsRender = true;
+}
+
+function screenToWorld(sx, sy) {
+  return {
+    x: (sx - CX - panX) / scale,
+    y: -(sy - CY - panY) / scale
+  };
+}
+
+function findNearestPrime(wx, wy) {
+  let best = null, bestD = 25;
+  for (let s of specials) {
+    if (Math.abs(s.x - wx) > 6 || Math.abs(s.y - wy) > 6) continue;
+    const d = (s.x - wx)**2 + (s.y - wy)**2;
+    if (d < bestD) { bestD = d; best = s; }
+  }
+  return best;
+}
+
+function distPointSeg(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx*dx + dy*dy;
+  if (len2 === 0) return (px-ax)**2 + (py-ay)**2;
+  let t = ((px-ax)*dx + (py-ay)*dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const projX = ax + t*dx;
+  const projY = ay + t*dy;
+  return (px-projX)**2 + (py-projY)**2;
+}
+
+function hitTestRope(sx, sy) {
+  const w = screenToWorld(sx, sy);
+  let best = -1, bestD = 144;
+  for (let i = 0; i < ropes.length; i++) {
+    const ro = ropes[i];
+    const d = distPointSeg(w.x, w.y, ro.x1, ro.y1, ro.x2, ro.y2);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
+}
+
+function showRopeCard(ro) {
+  const gap = Math.abs(ro.n2 - ro.n1);
+  const dx = ro.x2 - ro.x1;
+  const dy = ro.y2 - ro.y1;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  const ratio = len > 0.001 ? (gap / len).toFixed(3) : '∞';
+  const slope = dx !== 0 ? (dy/dx).toFixed(4) : '∞';
+  const ang = (Math.atan2(dy, dx) * 180 / Math.PI).toFixed(1) + '°';
+
+  document.getElementById('ropeTitle').textContent = `Corde [${ro.n1} → ${ro.n2}]`;
+  document.getElementById('rFam').textContent = FAM_NAMES[ro.family || 'default'];
+  document.getElementById('rGap').textContent = gap;
+  document.getElementById('rLen').textContent = len.toFixed(3);
+  document.getElementById('rRat').textContent = ratio;
+  document.getElementById('rSlope').textContent = slope;
+  document.getElementById('rAng').textContent = ang;
+
+  const a = toScreen(ro.x1, ro.y1);
+  const b = toScreen(ro.x2, ro.y2);
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  ropeCard.style.left = Math.min(Math.max(mx - 100, 8), W - 220) + 'px';
+  ropeCard.style.top = Math.min(Math.max(my - 80, 40), H - 180) + 'px';
+  ropeCard.style.display = 'block';
+}
+
+function hideRopeCard() {
+  ropeCard.style.display = 'none';
+  activeRope = null;
+  needsRender = true;
+}
+
+function showInfo(s) {
+  if (!s) { info.classList.remove('show'); return; }
+  const names = ['','Premier','Sophie Germain','Mersenne','Fermat','Heegner','Jumeau','Palindrome','Safe'];
+  infoText.textContent = `${s.n} — ${names[s.f]}  |  Ulam(${s.x}, ${s.y})`;
+  info.classList.add('show');
+  clearTimeout(info._t);
+  info._t = setTimeout(() => info.classList.remove('show'), 3500);
+}
+
+// Pointer events
+canvas.addEventListener('pointerdown', e => {
+  isDragging = true;
+  lastX = e.clientX; lastY = e.clientY;
+  tapStart = Date.now();
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (!isDragging) return;
+  panX += e.clientX - lastX;
+  panY += e.clientY - lastY;
+  lastX = e.clientX; lastY = e.clientY;
+  needsRender = true;
+});
+
+canvas.addEventListener('pointerup', e => {
+  isDragging = false;
+  const dt = Date.now() - tapStart;
+  const moved = Math.abs(e.clientX - lastX) + Math.abs(e.clientY - lastY);
+
+  if (dt < 300 && moved < 8) {
+    const now = Date.now();
+
+    if (drawMode) {
+      const w = screenToWorld(e.clientX, e.clientY);
+      const s = findNearestPrime(w.x, w.y);
+      if (!s) return;
+
+      if (!pending) {
+        pending = { n: s.n, x: s.x, y: s.y };
+        needsRender = true;
+      } else {
+        if (pending.n !== s.n) {
+          const newRope = {
+            n1: pending.n, x1: pending.x, y1: pending.y,
+            n2: s.n, x2: s.x, y2: s.y
+          };
+          newRope.family = classifyRope(newRope, ropes);
+          ropes.push(newRope);
+        }
+        pending = null;
+        needsRender = true;
+      }
+      return;
+    }
+
+    const hit = hitTestRope(e.clientX, e.clientY);
+    if (hit >= 0) {
+      if (activeRope === hit) {
+        hideRopeCard();
+      } else {
+        activeRope = hit;
+        showRopeCard(ropes[hit]);
+        needsRender = true;
+      }
+      return;
+    }
+
+    if (now - lastTap < 350) {
+      zoomAt(2.2, e.clientX, e.clientY);
+    } else {
+      const w = screenToWorld(e.clientX, e.clientY);
+      const s = findNearestPrime(w.x, w.y);
+      showInfo(s);
+    }
+    lastTap = now;
+  }
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoomAt(e.deltaY < 0 ? 1.15 : 0.87, e.clientX, e.clientY);
+}, { passive:false });
+
+// Pinch zoom
+let pinchDist = 0;
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    pinchDist = Math.hypot(dx, dy);
+  }
+}, { passive:false });
+
+canvas.addEventListener('touchmove', e => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.hypot(dx, dy);
+    if (pinchDist > 0) {
+      zoomAt(dist / pinchDist,
+        (e.touches[0].clientX + e.touches[1].clientX)/2,
+        (e.touches[0].clientY + e.touches[1].clientY)/2);
+      pinchDist = dist;
+    }
+  }
+}, { passive:false });
+
+// Init
+resize();
+resetView();
+compute();
+loop();
+</script>
+</body>
+</html>
